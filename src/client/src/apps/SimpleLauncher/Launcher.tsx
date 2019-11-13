@@ -123,11 +123,13 @@ export const Launcher: React.FC = () => {
   }, [initialBounds, isSearchVisible])
 
   const showSearch = async () => {
-    if (isSearchVisible || !initialBounds) {
+    if (!initialBounds) {
       return
     }
-    setIsSearchVisible(true)
-    await animateWindowSize({ ...initialBounds, height: initialBounds.height + INPUT_HEIGHT })
+    if (!isSearchVisible) {
+      await animateWindowSize({ ...initialBounds, height: initialBounds.height + INPUT_HEIGHT })
+      setIsSearchVisible(true)
+    }
     searchInput.current && searchInput.current.focus()
   }
 
