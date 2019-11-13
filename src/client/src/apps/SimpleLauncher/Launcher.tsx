@@ -41,14 +41,14 @@ const LauncherExit = () => (
   </ButtonContainer>
 )
 
-async function setOriginalWindowSize(initialBounds: Bounds) {
+async function animateWindowSize(bounds: Bounds, duration: number = 200) {
   const window = await fin.Window.getCurrent()
   return window.animate(
     {
       size: {
-        duration: 200,
-        height: initialBounds.height,
-        width: initialBounds.width,
+        duration,
+        height: bounds.height,
+        width: bounds.width,
       },
     },
     {
@@ -58,25 +58,16 @@ async function setOriginalWindowSize(initialBounds: Bounds) {
   )
 }
 
-async function extendWindowSize(initialBounds: Bounds) {
-  const window = await fin.Window.getCurrent()
-  // const bounds = await window.getBounds()
-  return window.animate(
-    {
-      size: {
-        duration: 200,
-        height: initialBounds.height + INPUT_HEIGHT,
-        width: initialBounds.width,
-      },
-    },
-    {
-      tween: 'ease-in-out',
-      interrupt: true,
-    },
-  )
-}
+// async function changeWindowHeight(bounds: Bounds) {
+//   const window = await fin.Window.getCurrent()
+//   return window.resizeTo(
+//     bounds.width,
+//     bounds.height,
+//     'top-left'
+//   )
+// }
 
-const getInitialBounds = async () => {
+const getWindowBounds = async () => {
   const window = await fin.Window.getCurrent()
   return window.getBounds()
 }
@@ -84,33 +75,46 @@ const getInitialBounds = async () => {
 export const Launcher: React.FC = () => {
   const [initialBounds, setInitialBounds] = useState<Bounds>()
   const [isSearchVisible, setIsSearchVisible] = useState(false)
-
-  const ref = useRef<() => void>()
-
-  ref.current = () => {
-    if (!isSearchVisible || !initialBounds) {
-      return
-    }
-    setIsSearchVisible(false)
-    setOriginalWindowSize(initialBounds)
-  }
+  const searchInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    getInitialBounds().then(setInitialBounds)
-
-    document.addEventListener('keydown', event => {
-      if (event.key === 'Escape') {
-        ref.current!()
-      }
-    })
+    getWindowBounds().then(setInitialBounds)
   }, [])
 
-  const showSearch = () => {
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (!isSearchVisible || !initialBounds) {
+          return
+        }
+        setIsSearchVisible(false)
+        animateWindowSize(initialBounds)
+      }
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [initialBounds, isSearchVisible])
+
+  const showSearch = async () => {
     if (isSearchVisible || !initialBounds) {
       return
     }
     setIsSearchVisible(true)
-    extendWindowSize(initialBounds)
+    await animateWindowSize({ ...initialBounds, height: initialBounds.height + INPUT_HEIGHT })
+    searchInput.current && searchInput.current.focus()
+  }
+
+  const onInputChange = () => {
+    if (!isSearchVisible || !initialBounds) {
+      return
+    }
+    animateWindowSize(
+      {
+        ...initialBounds,
+        height: initialBounds.height + INPUT_HEIGHT + Math.round(Math.random() * 10) * INPUT_HEIGHT,
+      },
+      75,
+    )
   }
 
   const Spotlight = () => (
@@ -120,7 +124,7 @@ export const Launcher: React.FC = () => {
   )
 
   return (
-    <React.Fragment>
+    <RootContainer>
       <LauncherGlobalStyle />
       <HorizontalContainer>
         <LogoContainer>
@@ -140,10 +144,18 @@ export const Launcher: React.FC = () => {
           <ThemeStorageSwitch />
         </ThemeSwitchContainer>
       </HorizontalContainer>
-      <Input />
-    </React.Fragment>
+      <Input ref={searchInput} onChange={onInputChange} />
+    </RootContainer>
   )
 }
+
+const RootContainer = styled.div`
+  height: 100%;
+  width: 100%;
+  background-color: ${({ theme }) => theme.core.lightBackground};
+  overflow: hidden;
+  color: ${({ theme }) => theme.core.textColor};
+`
 
 const HorizontalContainer = styled.div`
   height: 52px;
@@ -151,8 +163,6 @@ const HorizontalContainer = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: ${({ theme }) => theme.core.lightBackground};
-  color: ${({ theme }) => theme.core.textColor};
 `
 
 const IconTitle = styled.span`
@@ -208,6 +218,5 @@ const Input = styled.input`
   outline: none;
   border: none;
   font-size: 1.25rem;
-  color: ${({ theme }) => theme.core.textColor};
   ${rules.appRegionNoDrag};
 `
