@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { ChangeEvent, useEffect, useRef, useState } from 'react'
 import { rules } from 'rt-styleguide'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -16,6 +16,7 @@ import SearchIcon from './icons/searchIcon'
 library.add(faSignOutAlt)
 
 const INPUT_HEIGHT = 40
+const SEARCH_RESULT_HEIGHT = 30
 
 const exitHandler = async () => {
   const { OpenFin } = await getOpenFinPlatform()
@@ -72,8 +73,34 @@ const getWindowBounds = async () => {
   return window.getBounds()
 }
 
+const SEARCH_RESULTS = [
+  'Random Phrase and Idiom Generator',
+  'There will be times when',
+  'you may need',
+  'more than a random',
+  'word for what you want',
+  'to accomplish, and this',
+  'free online tool can help',
+  'The use of this tool',
+  'is quite simple. All',
+  'you need to do is indicate',
+  'the number of random phrases you',
+  'like to be displayed, and',
+  'then hit the "Generate Random',
+]
+
+function getRandomSearchResults(count: number) {
+  const result = []
+  for (let i = 0; i < count; i++) {
+    const index = Math.round(Math.random() * (SEARCH_RESULTS.length - 1))
+    result.push(SEARCH_RESULTS[index])
+  }
+  return result
+}
+
 export const Launcher: React.FC = () => {
   const [initialBounds, setInitialBounds] = useState<Bounds>()
+  const [dummySearchResults, setDummySearchResults] = useState<ReadonlyArray<string>>([])
   const [isSearchVisible, setIsSearchVisible] = useState(false)
   const searchInput = useRef<HTMLInputElement>(null)
 
@@ -104,14 +131,17 @@ export const Launcher: React.FC = () => {
     searchInput.current && searchInput.current.focus()
   }
 
-  const onInputChange = () => {
+  const onInputChange = (event: ChangeEvent) => {
+    const symbolsCount = (event.target as HTMLInputElement).value
     if (!isSearchVisible || !initialBounds) {
       return
     }
+    const searchResultCount = symbolsCount.length === 0 ? 0 : Math.round(Math.random() * 10)
+    setDummySearchResults(getRandomSearchResults(searchResultCount))
     animateWindowSize(
       {
         ...initialBounds,
-        height: initialBounds.height + INPUT_HEIGHT + Math.round(Math.random() * 10) * INPUT_HEIGHT,
+        height: initialBounds.height + INPUT_HEIGHT + searchResultCount * SEARCH_RESULT_HEIGHT,
       },
       75,
     )
@@ -144,7 +174,12 @@ export const Launcher: React.FC = () => {
           <ThemeStorageSwitch />
         </ThemeSwitchContainer>
       </HorizontalContainer>
+
       <Input ref={searchInput} onChange={onInputChange} />
+
+      {dummySearchResults.map(searchResult => (
+        <SearchResult>{searchResult}</SearchResult>
+      ))}
     </RootContainer>
   )
 }
@@ -218,5 +253,18 @@ const Input = styled.input`
   outline: none;
   border: none;
   font-size: 1.25rem;
+  ${rules.appRegionNoDrag};
+`
+
+const SearchResult = styled.div`
+  padding-left: 20px;
+  padding-right: 20px;
+  height: ${SEARCH_RESULT_HEIGHT}px;
+  background: none;
+  outline: none;
+  border: none;
+  font-size: 1rem;
+  font-style: italic;
+  opacity: 0.75;
   ${rules.appRegionNoDrag};
 `
