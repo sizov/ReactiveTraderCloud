@@ -145,7 +145,7 @@ commands:
             - run:
                 name: Rebase with master
                 command: |
-                  git rebasse origin master
+                  git rebase origin master
       - semver:
           bump: << parameters.bump >>
       - run:
