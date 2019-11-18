@@ -132,15 +132,14 @@ commands:
         enum: ["major", "minor", "patch", "prerelease"]
       environment:
         type: string
+      is_pr:
+        type: string
     steps:
       - run:
-          name: Call HelloWorld
+          name: Set up persisted variables
           command: |
-            curl \
-            --user ${API_TOKEN}: \
-            --header "Content-Type: application/json" \
-            --data "{\"build_parameters\": {\"CIRCLE_JOB\": \"hello\"}}" \
-            --request POST "https://circleci.com/api/v1.1/project/github/kptdobe/circleci_bug_report/tree/v2.0"
+            echo "is_pr << parameters.is_pr >>"
+            echo "is_pr << $CIRCLE_PULL_REQUEST >>"
       - setup_remote_docker
       - setup_env
       - checkout
@@ -185,14 +184,7 @@ jobs:
       - main_pipeline:
           bump: prerelease
           environment: none
-
-  feature_build_initiated_by_master:
-    docker:
-      - image: circleci/node:latest
-    steps:
-      - main_pipeline:
-          bump: prerelease
-          environment: none
+          is_pr: $CIRCLE_PULL_REQUEST
 
   deploy_last_build:
     docker:
@@ -258,19 +250,6 @@ workflows:
             branches:
               only: master
 
-      - feature_build_initiated_by_master:
-          requires:
-            # this is a hacky way to achieve building PRs when master is merged. there is a problem though:
-            # 1) building PR will not start until build on master finishes (ideally we want build on PR start immediately after master merge)
-            # 2) if master build fails, then PRs will not be rebuilt - but we want PRs to be build immediately on a new commit to master
-            # what if we create a dummy empty job on master which always succeeds and then build PRs in chain
-            - release_build
-          filters:
-            branches:
-              ignore:
-                - master
-                - /^release\/.*/
-
       - feature_build:
           filters:
             branches:
@@ -284,3 +263,7 @@ workflows:
               ignore: /.*/  # only run on matching tag
             tags:
               only: /^env-.*/
+
+
+# - use env var to see if you are on a branch that has PR (when param or inline in command)
+# - launch build for all existing branches - ones that do not have PRs will auto-cancel themselves
