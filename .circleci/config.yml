@@ -134,6 +134,7 @@ commands:
         type: string
       is_pr:
         type: string
+        default: "DEFAULT"
     steps:
       - run:
           name: Check if it is PR
