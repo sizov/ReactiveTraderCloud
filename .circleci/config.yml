@@ -136,10 +136,9 @@ commands:
         type: string
     steps:
       - run:
-          name: Set up persisted variables
+          name: Check if it is PR
           command: |
-            echo "is_pr << parameters.is_pr >>"
-            echo "is_pr << $CIRCLE_PULL_REQUEST >>"
+            echo "is_pr $CIRCLE_PULL_REQUEST"
       - setup_remote_docker
       - setup_env
       - checkout
